@@ -1,0 +1,150 @@
+services:
+
+  workspace:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: workspace
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./app:/var/www/html
+      - composer-cache:/var/www/.composer/cache
+      - npm-cache:/var/www/.npm
+    ports:
+      - 5173:5173
+    env_file:
+      - .env.php
+    secrets:
+      - db-app-password
+      - app-key
+    environment:
+      - TERM=xterm-256color
+      - FORCE_COLOR=1
+      - DB_HOST=db
+      - DB_DATABASE=app_db
+      - DB_USERNAME=app_user
+      - DB_PASSWORD_FILE=/run/secrets/db-app-password
+      - APP_KEY_FILE=/run/secrets/app-key
+
+  nginx:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: nginx_dev
+    restart: unless-stopped
+    volumes:
+      - app-storage:/var/www/html/storage/app:ro
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    depends_on:
+      php-fpm:
+        condition: service_healthy
+    develop:
+      watch:
+        - path: ./app/public
+          action: sync
+          target: /var/www/html/public
+        - path: ./configs/nginx.conf.dev
+          action: sync+restart
+          target: /etc/nginx/nginx.conf
+
+  php-fpm:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: development
+      secrets:
+        - app-key
+        - db-app-password
+      args:
+        - APP_KEY_FILE=/run/secrets/app-key
+        - DB_PASSWORD_FILE=/run/secrets/db-app-password
+    restart: unless-stopped
+    volumes:
+      - app-storage:/var/www/html/storage/app
+    depends_on:
+      db:
+        condition: service_healthy
+    secrets:
+      - db-app-password
+      - app-key
+    env_file:
+      - .env.php
+    environment:
+      - DB_HOST=db
+      - DB_DATABASE=app_db
+      - DB_USERNAME=app_user
+      - DB_PASSWORD_FILE=/run/secrets/db-app-password
+      - APP_KEY_FILE=/run/secrets/app-key
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm-healthcheck || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # Необходимо для xdebug. Также внесите исключение в правила своего файервола
+    # (_пример_ для ufw: sudo ufw allow from 172.18.0.0/16 to any port 9003 comment 'docker xdebug').
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    develop:
+      watch:
+        - path: ./app
+          action: sync
+          target: /var/www/html
+          ignore:
+            - "composer.json"
+            - "composer.lock"
+        - path: ./app/composer.lock
+          action: rebuild
+
+  db:
+    # Документация по образу: https://hub.docker.com/_/mysql
+    image: mysql:8
+    restart: unless-stopped
+    volumes:
+      - db-data:/var/lib/mysql
+    secrets:
+      - db-root-password
+      - db-app-password
+    environment:
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/db-root-password
+      - MYSQL_DATABASE=app_db
+      - MYSQL_USER=app_user
+      - MYSQL_PASSWORD_FILE=/run/secrets/db-app-password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  phpmyadmin:
+    # Документация по образу: https://hub.docker.com/_/phpmyadmin
+    image: phpmyadmin:5-apache
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    secrets:
+      - db-root-password
+    environment:
+      - PMA_HOST=db
+      - PMA_USER=root
+      - PMA_PASSWORD_FILE=/run/secrets/db-root-password
+      - UPLOAD_LIMIT=256M
+
+volumes:
+  app-storage:
+  db-data:
+  composer-cache:
+  npm-cache:
+
+secrets:
+  db-root-password:
+    file: ./secrets/db-root-pass
+  db-app-password:
+    file: ./secrets/db-app-pass
+  app-key:
+    file: ./secrets/app-key

@@ -1,0 +1,41 @@
+# --- Системные файлы и Git ---
+.git
+**/.gitignore
+**/.gitattributes
+.dockerignore
+compose-*.yaml
+*.Dockerfile
+Dockerfile
+
+# --- Окружение и секреты ---
+.env
+.env.*
+secrets
+
+# --- Второстепенное ---
+misc
+
+# --- IDE и Редакторы ---
+.vscode
+
+# --- Менеджеры пакетов ---
+app/vendor
+app/node_modules
+app/npm-debug.log
+
+# Специфичное для Laravel
+app/bootstrap/cache/*
+app/storage/app/private/*
+app/storage/app/public/*
+app/storage/framework/cache/data/*
+app/storage/framework/cache/locks/*
+app/storage/framework/sessions/*
+app/storage/framework/testing/*
+app/storage/framework/views/*
+app/storage/logs/*
+app/storage/pail/*
+
+# Тесты
+app/tests
+app/phpunit.xml
+app/phpunit.xml.dist
