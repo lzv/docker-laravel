@@ -85,8 +85,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-    # Необходимо для xdebug. Также внесите исключение в правила своего файервола
-    # (_пример_ для ufw: sudo ufw allow from 172.18.0.0/16 to any port 9003 comment 'docker xdebug').
+    # Необходимо, чтобы xdebug мог соединиться с IDE на хосте.
     extra_hosts:
       - "host.docker.internal:host-gateway"
     develop:

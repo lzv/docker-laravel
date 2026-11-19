@@ -1,4 +1,4 @@
-Для начала выполните в корне проекта (для linux):
+Для начала создайте в корне проекта пустой файл .env.php и выполните (для linux):
 
 UID=$(id -u) GID=$(id -g) docker compose -f compose-dev.yaml run -itP --rm --build workspace
 
@@ -10,7 +10,7 @@ laravel new project_name --no-boost
 
 Перенесите файлы .env и .env.example из app в корень проекта. Переменные окружения будут передаваться не через .env файл фремворка Laravel, а через переменные окружения образов docker. Удалите из .env пароли к БД и APP_KEY и запишите их в secrets. В файлах сайта, в config/app.php поменяйте 'key' => env('APP_KEY'), на 'key' => file_get_contents(env('APP_KEY_FILE')). Аналогично поменяйте нужные строки в config/database.php на file_get_contents(env('DB_PASSWORD_FILE')).
 
-Затем переименуйте .env в .env.php - это файл только для Laravel. Создайте другой файл .env, в который запишите переменную NGINX_PORT со своим значением. Это будет файл только для docker.
+Затем переименуйте .env в .env.php (и .env.example в .env.php.example) - это файл только для Laravel. Создайте другой файл .env, в который запишите переменную NGINX_PORT со своим значением - порт, по которму будет доступен nginx с хоста (например, 8080). Это будет файл только для docker.
 
 Секреты:
 secrets/db-root-pass - пароль root для mysql, используется только в compose-dev.yaml.
@@ -23,7 +23,7 @@ secrets/app-key - значение APP_KEY.
 
 UID=$(id -u) GID=$(id -g) docker compose -f compose-dev.yaml up -d --build
 
-Контейнер workspace служит для установки/удаления пакетов composer/npm, выполнения npm run build, а также для запуска vite. Команда по умолчанию в нем bash. Именованые контейнеры сохранят кэш composer и npm между запусками контейнера. Для выполнения команд к контейнеру нужно присоединиться или сделать exec bash.
+Контейнер workspace служит для установки/удаления пакетов composer/npm, выполнения npm run build, а также для запуска vite. Команда по умолчанию в нем bash. Именованые контейнеры сохранят кэш composer и npm между запусками контейнера. Для выполнения команд нужно присоединиться к контейнеру или сделать exec bash.
 
 npm run build не выполняется во время сборки, т.к. предполагается, что оно выполняется вручную в контейнере workspace, и готовые ассеты копируются в образ с работающим сайтом и в образ с nginx. 
 
@@ -42,9 +42,32 @@ composer run dev нет смысла запускать в контейнере 
 
 Цель контейнера development - быть наиболее похожим на контейнер production, чтобы отловить все ошибки из за окружения. Поэтому там только добавляется xdebug, и больше ничего.
 
-В контейнерах development и production реализован максимальный уровень безопасности: рабочие процессы php-fpm запускается от пользователя www-data, при этом все файлы сайта принадлежат root, кроме каталогов, куда фреймворку нужна запись: bootstrap/cache и /storage.
+Чтобы xdebug из контейнера смог соединиться с вашей IDE, нужно добавить исключение в файервол. Если у вас ufw, выполните: 
+sudo ufw allow from 172.18.0.0/16 to any port 9003 comment 'docker xdebug'
+Выяснить нужный ip можно так:
+docker inspect id_контейнера_с_php | grep Gateway
+
+Пример конфигурации в launch.json:
+{
+    "name": "Listen for Xdebug",
+    "type": "php",
+    "request": "launch",
+    "port": 9003,
+    "pathMappings": {
+        "/var/www/html": "${workspaceRoot}/app"
+    },
+    "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": ".*",
+        "uriFormat": "http://localhost:8080/?XDEBUG_SESSION_START=1"
+    }
+}
+
+В контейнерах development и production реализован максимальный уровень безопасности: рабочие процессы php-fpm запускается от пользователя www-data, при этом все файлы и каталоги сайта принадлежат root, кроме каталогов, куда фреймворку нужна запись: bootstrap/cache и /storage.
 
 Файлы, загружаемые на сайт, хранятся в storage/app (public и/или private). Они должны соответствовать содержимому БД и сохраняться между пересозданием контейнеров production и development. Поэтому в этих контейнерах к каталогу storage/app примонтирован именованый том. 
+
+Другие файлы в storage и файлы в bootstrap/cache создаются приложением и должны соответствовать текущему php коду. Поэтому эти каталоги исключены из контекста сборки, и при этом их содержимое не сохраняются в каком-либо томе.
 
 В файле nginx.conf.prod замените your.domain на адрес вашего сайта.
 
