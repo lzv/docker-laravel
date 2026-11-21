@@ -47,7 +47,7 @@ sudo ufw allow from 172.18.0.0/16 to any port 9003 comment 'docker xdebug'
 Выяснить нужный ip можно так:
 docker inspect id_контейнера_с_php | grep Gateway
 
-Пример конфигурации в launch.json:
+Пример конфигурации в launch.json при использовании vscode и расширения devsense.phptools-vscode:
 {
     "name": "Listen for Xdebug",
     "type": "php",
