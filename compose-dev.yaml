@@ -8,6 +8,7 @@ services:
       args:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
+    restart: unless-stopped
     tty: true
     stdin_open: true
     volumes:
@@ -85,6 +86,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 30s
     # Необходимо, чтобы xdebug мог соединиться с IDE на хосте.
     extra_hosts:
       - "host.docker.internal:host-gateway"

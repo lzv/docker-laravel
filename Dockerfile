@@ -86,6 +86,7 @@ COPY --from=builder_php_prod /usr/local/lib/php/extensions/ /usr/local/lib/php/e
 COPY --from=builder_php_prod /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 
 COPY --chmod=+x scripts/php-fpm-healthcheck /usr/local/bin/php-fpm-healthcheck
+COPY --chmod=+x scripts/docker-php-entrypoint-prod /usr/local/bin/docker-php-entrypoint
 
 COPY configs/php.ini-production $PHP_INI_DIR/php.ini
 COPY configs/www.conf-production /usr/local/etc/php-fpm.d/www.conf
@@ -95,6 +96,8 @@ COPY --from=builder_php_prod /var/www/html/ /var/www/html/
 RUN chown -R www-data:www-data /var/www/html/bootstrap/cache /var/www/html/storage && \
     chmod 755 /var/www/html && \
     chown root:root /var/www/html
+
+WORKDIR /var/www/html
 
 # Образ не наследует builder_php_prod, чтобы при 
 # изменении кода не устанавливать заново xdebug.
@@ -115,6 +118,8 @@ FROM production AS development
 
 COPY --from=builder_php_dev /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=builder_php_dev /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
+
+COPY --chmod=+x scripts/docker-php-entrypoint-dev /usr/local/bin/docker-php-entrypoint
 
 COPY configs/php.ini-development $PHP_INI_DIR/php.ini
 COPY configs/www.conf-development /usr/local/etc/php-fpm.d/www.conf
