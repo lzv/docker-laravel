@@ -1,1 +1,91 @@
-# Еще не готово.
+# Файл для сборки образов для продакшена. Настройте для своего хостинга.
+services:
+
+  nginx:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: nginx_prod
+    restart: unless-stopped
+    volumes:
+      - app-storage-prod:/var/www/html/storage/app:ro
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    depends_on:
+      php-fpm:
+        condition: service_healthy
+
+  php-fpm:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: production
+      secrets:
+        - app-key
+        - db-app-password
+      args:
+        - APP_KEY_FILE=/run/secrets/app-key
+        - DB_PASSWORD_FILE=/run/secrets/db-app-password
+    restart: unless-stopped
+    volumes:
+      - app-storage-prod:/var/www/html/storage/app
+    depends_on:
+      db:
+        condition: service_healthy
+    secrets:
+      - db-app-password
+      - app-key
+    env_file:
+      - .env.php
+    environment:
+      - DB_HOST=db
+      - DB_DATABASE=app_db
+      - DB_USERNAME=app_user
+      - DB_PASSWORD_FILE=/run/secrets/db-app-password
+      - APP_KEY_FILE=/run/secrets/app-key
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm-healthcheck || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  db:
+    # Документация по образу: https://hub.docker.com/_/mysql
+    image: mysql:8
+    restart: unless-stopped
+    volumes:
+      - db-data-prod:/var/lib/mysql
+    secrets:
+      - db-app-password
+    environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=y
+      - MYSQL_DATABASE=app_db
+      - MYSQL_USER=app_user
+      - MYSQL_PASSWORD_FILE=/run/secrets/db-app-password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  phpmyadmin:
+    # Документация по образу: https://hub.docker.com/_/phpmyadmin
+    image: phpmyadmin:5-apache
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - PMA_HOST=db
+      - UPLOAD_LIMIT=256M
+
+volumes:
+  app-storage-prod:
+  db-data-prod:
+
+secrets:
+  db-app-password:
+    file: ./secrets/db-app-pass
+  app-key:
+    file: ./secrets/app-key
