@@ -43,6 +43,7 @@ services:
       - DB_USERNAME=app_user
       - DB_PASSWORD_FILE=/run/secrets/db-app-password
       - APP_KEY_FILE=/run/secrets/app-key
+      - FCGI_STATUS_PATH=/php-fpm-status
     healthcheck:
       test: ["CMD-SHELL", "php-fpm-healthcheck || exit 1"]
       interval: 10s
