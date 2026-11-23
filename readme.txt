@@ -74,3 +74,31 @@ docker inspect id_контейнера_с_php | grep Gateway
 
 Если нужно, чтобы каталог storage/app/public был доступен публично, перейдите в public и создайте относительную ссылку: 
 ln -s ../storage/app/public storage
+
+---------------
+
+Для корректной работы расширения laravel.vscode-laravel в vscode ему нужно указать опции:
+
+"Laravel.phpEnvironment": "docker",
+"Laravel.phpCommand": [
+    "docker",
+    "compose",
+    "-f",
+    "../compose-dev.yaml",
+    "exec",
+    "-T",
+    "workspace",
+    "php"
+],
+"Laravel.basePath": "app",
+
+Это будет работать только при запущенных контейнерах. Но при этом не будет работать создание файлов laravel через ПКМ на каталоге в дереве каталогов, из за бага с неправильным поиском файла composer.json. Для решения этого можно напрямую открыть подкаталог app в отдельном окне vscode, либо настроить multi-root workspace. В настройках каталога app не нужно указывать опцию Laravel.basePath, а в его файле launch.json нужно убрать подкаталог app из опции pathMappings.
+
+При использовании multi-root workspace опции Laravel.phpEnvironment и Laravel.phpCommand указываются в файле .code-workspace, при этом каталог app должен идти первым, т.к. опции применяются к первому каталогу. В settings.json корня проекта нужно исключить подкаталог app из обработки, чтобы избежать дублирования: 
+
+"files.exclude": {
+    "app": true
+},
+"search.exclude": {
+    "app": true
+}
