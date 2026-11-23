@@ -71,3 +71,6 @@ docker inspect id_контейнера_с_php | grep Gateway
 В файле nginx.conf.prod замените your.domain на адрес вашего сайта.
 
 В конфигурации php-fpm включена опция pm.status_path = /php-fpm-status, и в dev конфигурации nginx передаст запрос на этот путь с адреса status.localhost:8080. В prod конфигурации этот адрес недоступен снаружи контейнера и используется только скриптом php-fpm-healthcheck. Настройте nginx для доступа к адресу.
+
+Если нужно, чтобы каталог storage/app/public был доступен публично, перейдите в public и создайте относительную ссылку: 
+ln -s ../storage/app/public storage
