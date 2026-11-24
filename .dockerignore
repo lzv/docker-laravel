@@ -8,8 +8,8 @@ compose-*.yaml
 Dockerfile
 
 # --- Окружение и секреты ---
-.env
-.env.*
+**/.env
+**/.env.*
 secrets
 
 # --- Второстепенное ---
