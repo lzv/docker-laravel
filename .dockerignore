@@ -16,7 +16,7 @@ secrets
 misc
 
 # --- IDE и Редакторы ---
-.vscode
+**/.vscode
 
 # --- Менеджеры пакетов ---
 app/vendor
