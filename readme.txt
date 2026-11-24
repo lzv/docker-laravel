@@ -102,3 +102,30 @@ ln -s ../storage/app/public storage
 "search.exclude": {
     "app": true
 }
+
+---------------
+
+При использовании расширения devsense.phptools-vscode можно настроить его на использование php в контейнере сервиса workspace. Можно использовать и php-fpm, но там нет файлов с тестами. Для начала создайте файл app/.vscode/php-docker.sh с правами на выполнение: 
+
+#!/bin/bash
+
+LOCAL_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOCAL_PATH="$(dirname "$LOCAL_PATH")"
+ROOT_PATH="$(dirname "$LOCAL_PATH")"
+CONTAINER_PATH="/var/www/html"
+
+ARGS=()
+for arg in "$@"; do
+    ARGS+=("${arg//$LOCAL_PATH/$CONTAINER_PATH}")
+done
+
+docker compose -f "$ROOT_PATH/compose-dev.yaml" exec -T workspace php "${ARGS[@]}"
+
+После этого пропишите настройки для каталога app: 
+
+"php.executables": {
+    "docker-php": "${workspaceFolder}/.vscode/php-docker.sh"
+},
+"php.version": "docker-php",
+
+
