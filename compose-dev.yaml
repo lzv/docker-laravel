@@ -58,12 +58,6 @@ services:
       context: .
       dockerfile: ./Dockerfile
       target: development
-      secrets:
-        - app-key
-        - db-app-password
-      args:
-        - APP_KEY_FILE=/run/secrets/app-key
-        - DB_PASSWORD_FILE=/run/secrets/db-app-password
     restart: unless-stopped
     volumes:
       - app-storage:/var/www/html/storage/app

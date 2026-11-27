@@ -24,18 +24,25 @@ EOF
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
     && composer --version
 
-ARG APP_KEY_FILE
-ARG DB_PASSWORD_FILE
+# Файлы конфигурации laravel читаются после установки пакетов composer. Поэтому файлы, указанные в этих переменных, должны существовать.
+# Но их содержимое при этом не используется. Поэтому не нужно монтировать секреты, а достаточно создать пустые файлы.
+ARG APP_KEY_FILE="/tmp/key_file"
+ARG DB_PASSWORD_FILE="/tmp/db_pass_file"
+RUN touch ${APP_KEY_FILE} && touch ${DB_PASSWORD_FILE}
 
 # Образ workspace предназначен для создания проекта и работы с пакетами composer,
 # а также работы с npm и запуска vite.
 FROM base_builder_php AS workspace
+
+# Удаление ненужных файлов
+RUN rm ${APP_KEY_FILE} && rm ${DB_PASSWORD_FILE}
 
 COPY --from=node:24-trixie-slim /usr/local/bin/node /usr/local/bin/node
 COPY --from=node:24-trixie-slim /usr/local/include/node /usr/local/include/node
 COPY --from=node:24-trixie-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+    && export NODE_DISABLE_COMPILE_CACHE=1 \
     && node --version && npm --version
 
 ARG UID=1000
